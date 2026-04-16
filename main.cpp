@@ -1,14 +1,11 @@
 #include <iostream>
 #include <string>
-#include <vector>
 #include <cctype>
 
 using namespace std;
 
 bool isWordCorrect(string word);
 string getClosestWord(string word, int& bestDistance);
-
-
 
 int main() {
     string inputWord;
