@@ -1,41 +1,133 @@
-# Simple C++ Spell Corrector
+# C++ Spell Corrector
 
-This project is a beginner-friendly C++ application that works like an auto-correction system. You enter a word, and if the word is misspelled (not found in the loaded dictionary), the program will identify the closest correctly spelled word and suggest it. 
+A beginner-friendly spell checker written in C++. Enter a word, and the program will:
 
-## How it Works
+1. Check if the word exists in the dictionary.
+2. If not, suggest the closest word using Levenshtein edit distance.
 
-The spell corrector utilizes two main concepts: a **Dictionary** and **Edit Distance**.
+It is simple, readable, and a good mini project for learning strings, vectors, file I/O, and dynamic programming.
 
-### 1. The Dictionary (`dictionary.cpp`)
-The program reads a large list of words directly from a file called `words.csv`. Because the CSV file contains hundreds of thousands of words formatted with quotation marks (e.g. `"apple"`), the program:
-- Strips out the extra quotation marks and empty lines.
-- Saves the parsed words inside a `static vector<string> dict`.
-- Uses caching (the `static` keyword) to ensure it only reads the dictionary file the *first* time you try to spellcheck a word, preventing massive slow-downs on subsequent checks.
+## What Algorithms Are Used?
 
-### 2. Levenshtein Edit Distance (`edit_distance.cpp`)
-When you type a word that isn't in the dictionary, the program needs to figure out which word is "closest" to what you typed. It does this by scoring how many single-character edits it takes to turn your input into a dictionary word.
+### 1. Dictionary Lookup (Linear Search)
+The dictionary is loaded from `words.csv` into a `vector<string>`.
 
-An edit can be:
-- **Insertion**: Adding a letter (e.g., *aple* $\to$ *ap**p**le*)
-- **Deletion**: Removing a letter (e.g., *appple* $\to$ *apple*)
-- **Substitution**: Changing a letter (e.g., *applz* $\to$ *appl**e***)
+- To check correctness, the program scans words one by one and compares with the input.
+- This is a linear search, so the lookup cost is $O(D)$ where $D$ is dictionary size.
 
-The program loops through the `words.csv` dictionary, calculates the edit distance between your input and every single word, and proposes the word with the lowest score as the suggestion!
+### 2. Levenshtein Edit Distance (Dynamic Programming)
+For misspelled words, the program computes edit distance against dictionary words and picks the minimum.
 
-## File Structure
+- Insert, delete, and substitute each count as 1 operation.
+- DP table size is $(m+1) \times (n+1)$ for words of lengths $m$ and $n$.
+- Per comparison cost is $O(mn)$ time and $O(mn)$ memory.
 
-- **`main.cpp`**: The primary entry point. It handles asking the user for a word, interacting with the dictionary checking functions, and printing out the final correction and edit distance explanation.
-- **`dictionary.cpp`**: Contains the logic to load `words.csv`, clear out formatting fluff, and search through the resulting list for matches and closest words.
-- **`edit_distance.cpp`**: Contains the algorithm (Dynamic Programming) used to calculate the edit distance mathematically between two strings. 
-- **`Makefile`**: A set of compilation instructions that automatically bundle your `.cpp` source files together into a runnable `.exe` file without needing complex commands.
+### Overall Suggestion Cost
+If dictionary size is $D$, and average word lengths are small, finding the closest suggestion is roughly:
+
+$$
+O\left(\sum_{i=1}^{D} m \cdot n_i\right) \approx O(D \cdot m \cdot \bar{n})
+$$
+
+This is fine for learning, but can be slow on very large dictionaries.
+
+## Project Structure
+
+- `main.cpp`
+	- CLI loop.
+	- Converts user input to lowercase.
+	- Calls `isWordCorrect(...)` and `getClosestWord(...)`.
+
+- `dictionary.cpp`
+	- Loads and caches dictionary in a static vector (`getDictionary()`).
+	- Cleans CSV lines:
+		- removes trailing `\r` (Windows line endings)
+		- strips surrounding quotes (`"word"` -> `word`)
+		- lowercases words
+	- Implements:
+		- `bool isWordCorrect(string word)`
+		- `string getClosestWord(string word, int& bestDistance)`
+
+- `edit_distance.cpp`
+	- Implements `calculateEditDistance(string s1, string s2)` using DP.
+
+- `words.csv`
+	- Source dictionary file.
+
+- `Makefile`
+	- Builds executable `corrector` from all `.cpp` files.
+
+## Requirements
+
+- C++ compiler with C++11 support (e.g., `g++`)
+- `make` (or `mingw32-make` on many Windows setups)
 
 ## How to Build and Run
 
-If you have your compiler (`g++` and `make`) active on your terminal's `PATH`:
+### Option A: Using Make
 
-1. Open your terminal in this folder.
-2. Type `make` (or `mingw32-make` on MSYS2 Windows setups) to build the program.
-3. Run it via `./corrector.exe`.
-4. Type in your word when prompted! 
+From the project folder:
 
-*(Alternatively, you can just import the three `.cpp` files into your favorite C++ IDE like Visual Studio, CodeBlocks, or CLion and hit the 'Run' button!)*
+#### Windows (PowerShell / CMD)
+```bash
+mingw32-make
+./corrector.exe
+```
+
+If `make` is available instead of `mingw32-make`, use:
+```bash
+make
+./corrector.exe
+```
+
+#### Linux / macOS
+```bash
+make
+./corrector
+```
+
+### Option B: Compile Directly with g++
+
+#### Windows
+```bash
+g++ -Wall -std=c++11 -o corrector.exe main.cpp dictionary.cpp edit_distance.cpp
+./corrector.exe
+```
+
+#### Linux / macOS
+```bash
+g++ -Wall -std=c++11 -o corrector main.cpp dictionary.cpp edit_distance.cpp
+./corrector
+```
+
+## Usage
+
+1. Run the executable.
+2. Type a word.
+3. Read the result:
+	 - Correct word -> confirmation message.
+	 - Incorrect word -> closest suggestion + edit distance.
+4. Type `exit` to quit.
+
+Example:
+```text
+Type a word to spell-check (or type 'exit' to quit): appl
+Oops! 'appl' is not in the dictionary.
+Did you mean: 'apple'?
+Explanation: 'apple' was chosen because it has an edit distance of 1 from your input.
+```
+
+## Notes and Limitations
+
+- Input is normalized to lowercase in `main.cpp`.
+- The dictionary is loaded once and cached, which improves repeated checks.
+- Current search method is brute force over the full dictionary for suggestions.
+- If `words.csv` is missing or empty, behavior is undefined (closest-word logic expects at least one dictionary word).
+
+## Possible Improvements
+
+- Use `unordered_set` for faster exact-word checks.
+- Add length-based filtering before edit distance to reduce comparisons.
+- Use BK-tree or trie-based approaches for faster nearest-word queries.
+- Handle empty/missing dictionary with explicit error messages.
+- Add unit tests for dictionary parsing and edit distance correctness.
